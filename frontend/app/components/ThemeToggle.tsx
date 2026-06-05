@@ -1,6 +1,6 @@
 'use client'
 
-import {useEffect, useState} from 'react'
+import {useSyncExternalStore} from 'react'
 import {useTheme} from '@teispace/next-themes'
 import {MoonIcon, SunIcon} from '@heroicons/react/24/solid'
 
@@ -21,11 +21,19 @@ import {cn} from '@/lib/utils'
  * per docs/A11Y.md, and the provider's `disableTransitionOnChange` suppresses the
  * color-token transition during the switch.
  */
+// Hydration-safe mount flag. `useSyncExternalStore` returns the server snapshot
+// (`false`) during SSR/first paint and the client snapshot (`true`) once
+// hydrated, without a synchronous setState inside an effect — which the React 19
+// `react-hooks/set-state-in-effect` rule (Next 16 / eslint-plugin-react-hooks v6)
+// flags as cascading-render-prone. No subscription is needed; the value never
+// changes after mount, so the subscribe callback is a no-op.
+const noopSubscribe = () => () => {}
+const getMountedSnapshot = () => true
+const getServerSnapshot = () => false
+
 export default function ThemeToggle({className}: {className?: string}) {
   const {resolvedTheme, setTheme} = useTheme()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => setMounted(true), [])
+  const mounted = useSyncExternalStore(noopSubscribe, getMountedSnapshot, getServerSnapshot)
 
   // Pre-mount the resolved theme is unknown (no `window` during SSR/first paint).
   // Reserve the 9×9 slot with an inert placeholder so the footer doesn't shift
@@ -48,17 +56,17 @@ export default function ThemeToggle({className}: {className?: string}) {
       aria-label={label}
     >
       <SunIcon
-				className={cn('block dark:hidden transform rotate-0 dark:-rotate-180 duration-150 delay-100',
-					'transition-[scale,rotate,transform] motion-reduce:transition-none motion-reduce:group-hover:scale-100',
-					'group-hover:scale-[1.1] group-hover:-rotate-10 group-active:scale-[0.9]'
-				)}
+        className={cn('block dark:hidden transform rotate-0 dark:-rotate-180 duration-150 delay-100',
+          'transition-[scale,rotate,transform] motion-reduce:transition-none motion-reduce:group-hover:scale-100',
+          'group-hover:scale-[1.1] group-hover:-rotate-10 group-active:scale-[0.9]'
+        )}
         aria-hidden="true"
       />
       <MoonIcon
-				className={cn('absolute hidden dark:block transform rotate-90 dark:rotate-0 duration-150 delay-100',
-					'transition-[scale,rotate,transform] motion-reduce:transition-none motion-reduce:group-hover:scale-100',
-					'group-hover:scale-[1.1] group-hover:rotate-10 group-active:scale-[0.9]'
-				)}
+        className={cn('absolute hidden dark:block transform rotate-90 dark:rotate-0 duration-150 delay-100',
+          'transition-[scale,rotate,transform] motion-reduce:transition-none motion-reduce:group-hover:scale-100',
+          'group-hover:scale-[1.1] group-hover:rotate-10 group-active:scale-[0.9]'
+        )}
         aria-hidden="true"
       />
       <span className="sr-only">{label}</span>
