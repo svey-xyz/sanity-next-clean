@@ -1,7 +1,4 @@
-/**
- * As this file is reused in several other files, try to keep it lean and small.
- * Importing other npm packages here could lead to needlessly increasing the client bundle size, or end up in a server-only function that don't need it.
- */
+/** Keep this file lean — it's imported widely; extra deps bloat the client/server bundle. */
 
 function assertValue<T>(v: T | undefined, errorMessage: string): T {
   if (v === undefined) {
@@ -21,12 +18,8 @@ export const projectId = assertValue(
   'Missing environment variable: NEXT_PUBLIC_SANITY_PROJECT_ID',
 )
 
-/**
- * see https://www.sanity.io/docs/api-versioning for how versioning works
- */
+// API versioning: https://www.sanity.io/docs/api-versioning
 export const apiVersion = process.env.NEXT_PUBLIC_SANITY_API_VERSION || '2025-09-25'
 
-/**
- * Used to configure edit intent links, for Presentation Mode, as well as to configure where the Studio is mounted in the router.
- */
+// Edit-intent links (Presentation Mode) + where the Studio is mounted in the router.
 export const studioUrl = process.env.NEXT_PUBLIC_SANITY_STUDIO_URL || 'http://localhost:3333'

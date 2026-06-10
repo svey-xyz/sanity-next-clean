@@ -4,13 +4,11 @@ import {Progress75Icon} from '@sanity/icons'
 import {backgroundField} from './shared'
 
 /**
- * Scores — Lighthouse-style radial-progress metrics. Each item renders a circular
- * arc that animates 0→`value` with a center number that counts up, driven by
- * `frontend/app/components/Scores.tsx`. Distinct from the `stats` block (plain
- * big-number row): Scores is the animated radial count-up variant.
- *
- * `value` / `max` define the arc fill (`value / (max ?? 100)`). Keep `max`
- * unset for percentage-style 0–100 scores; set it for "37 / 50" style ratios.
+ * Scores — animated radial-progress metrics (Lighthouse-style). Each item's arc
+ * fills 0→`value` with a counting-up center number; rendered by
+ * `frontend/app/components/Scores.tsx`. Unlike `stats` (plain big-number row),
+ * Scores is the animated count-up variant. Arc fill = `value / (max ?? 100)`;
+ * leave `max` unset for 0–100 percentages, set it for "37 / 50" ratios.
  */
 export const scores = defineType({
   name: 'scores',

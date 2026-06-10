@@ -17,9 +17,8 @@ type Props = {
 
 type ScoreItem = NonNullable<ExtractPageBuilderType<'scores'>['items']>[number]
 
-// --- Reduced-motion as an external store (hydration-safe, no setState-in-effect)
-// — mirrors the pattern in `ShaderBackground.tsx`. Server snapshot is `false`
-// (assume motion-OK during SSR); the client snapshot reflects the live query.
+// Reduced-motion as a hydration-safe external store (mirrors ShaderBackground.tsx):
+// server snapshot assumes motion-OK; the client snapshot reflects the live query.
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
 function subscribeReducedMotion(onChange: () => void): () => void {
   if (typeof window === 'undefined') return () => {}
@@ -35,8 +34,8 @@ function getReducedMotionServerSnapshot(): boolean {
   return false
 }
 
-// Geometry for the SVG radial gauge. The viewBox is 100×100; the arc is a stroked
-// circle whose dash offset is animated to reveal `progress` (0–1) of the path.
+// SVG radial gauge geometry. viewBox is 100×100; the arc is a stroked circle whose
+// dash offset animates to reveal `progress` (0–1) of the path.
 const SIZE = 100
 const STROKE = 9
 const RADIUS = (SIZE - STROKE) / 2 // leave room for the stroke width
@@ -49,16 +48,12 @@ function easeOutCubic(t: number): number {
 }
 
 /**
- * One radial gauge. Owns its own rAF count-up + arc reveal so each item can
- * stagger independently. Animation is driven by `active` (toggled by the parent's
- * IntersectionObserver) and short-circuited when `reduced` is set — in which case
- * the final value renders immediately with no rAF.
+ * One radial gauge with its own rAF count-up + arc reveal, so items stagger
+ * independently. Driven by `active` (parent IntersectionObserver); short-circuits
+ * to the final value when `reduced` is set.
  *
- * Accessibility: the real numeric value (`value` of `max`) is always present as
- * text in the DOM — under reduced motion it is the rendered number directly;
- * otherwise the animated counter starts at the final value's width but the item's
- * `aria-label` carries the true final figure, and a visually-hidden `<span>`
- * mirrors it so AT never reads the mid-count value. The SVG is `aria-hidden`.
+ * a11y: the true value (`value` of `max`) is always in the DOM as sr-only text, so
+ * AT reads the final figure, never the mid-count value. The SVG is aria-hidden.
  */
 function ScoreGauge({item, i, active, reduced}: {item: ScoreItem; i: number; active: boolean; reduced: boolean}) {
   const max = item.max && item.max > 0 ? item.max : 100
@@ -67,20 +62,17 @@ function ScoreGauge({item, i, active, reduced}: {item: ScoreItem; i: number; act
   const isPercent = !item.max // no explicit max → percentage-style score
   const ariaValue = isPercent ? `${target} percent` : `${target} of ${max}`
 
-  // The single animated value: eased progress 0→1, written **only** inside the
-  // rAF callback (never synchronously in the effect body — that would trip
-  // `react-hooks/set-state-in-effect`). The reduced / out-of-view states are
-  // derived at render time below, so they never need a `setState` reset.
+  // Eased progress 0→1, written only inside the rAF callback (never synchronously,
+  // which would trip react-hooks/set-state-in-effect). Reduced / out-of-view states
+  // are derived at render time, so they need no setState reset.
   const [eased, setEased] = useState(0)
   const rafRef = useRef<number>(0)
 
   useEffect(() => {
-    // Only the in-view + motion-OK case runs the loop. Reduced motion and the
-    // out-of-view state are handled purely at render time (no setState here).
+    // Only run the loop when in-view + motion-OK; other states render statically.
     if (reduced || !active) return
 
-    // Count-up from 0 → 1, easing out. The first frame yields ~0, so the reset
-    // happens implicitly as the loop starts — no synchronous pre-reset needed.
+    // Count up 0→1, easing out; the first frame yields ~0 so no pre-reset is needed.
     const start = performance.now()
     const tick = (now: number) => {
       const t = Math.min((now - start) / COUNT_UP_MS, 1)
@@ -96,10 +88,8 @@ function ScoreGauge({item, i, active, reduced}: {item: ScoreItem; i: number; act
     }
   }, [active, reduced])
 
-  // Resolve the displayed values at render time:
-  //   - reduced motion → final values immediately, no animation.
-  //   - in view + motion OK → animated `eased` fraction.
-  //   - out of view → 0, so re-entry replays the count-up.
+  // Values resolved at render: reduced → finals; in-view → eased fraction;
+  // out-of-view → 0, so re-entry replays the count-up.
   const fraction = reduced ? 1 : active ? eased : 0
   const display = Math.round(target * fraction)
   const fill = progress * fraction
@@ -131,9 +121,8 @@ function ScoreGauge({item, i, active, reduced}: {item: ScoreItem; i: number; act
             strokeWidth={STROKE}
             className="stroke-border"
           />
-          {/* Progress arc — accent color via the `--primary` token (AAA contrast,
-              recolors with light/dark). No animated stroke transition under
-              reduced motion; the dash offset is already at its final value. */}
+          {/* Progress arc — `--primary` token (AAA, theme-aware). Dash offset is
+              already final under reduced motion, so no stroke transition needed. */}
           <circle
             cx={SIZE / 2}
             cy={SIZE / 2}
@@ -146,9 +135,7 @@ function ScoreGauge({item, i, active, reduced}: {item: ScoreItem; i: number; act
             className="stroke-primary"
           />
         </svg>
-        {/* Center number — counts up; mirrors `display`. The decorative live
-            number is wrapped so AT reads the stable `aria-label` on the <li>
-            instead (see below), not the mid-count figure. */}
+        {/* Center number — counts up (aria-hidden); the sr-only value below is what AT reads. */}
         <span
           aria-hidden="true"
           className="absolute inset-0 flex items-center justify-center text-2xl font-semibold tabular-nums text-foreground transition-transform duration-300 will-change-transform motion-safe:group-hover/score:scale-110"
@@ -177,18 +164,13 @@ const colClass: Record<number, string> = {
 }
 
 /**
- * Scores — Lighthouse-style radial-progress metrics. Each item is a circular arc
- * that fills 0→value with a center number that counts up. The animation triggers
- * when the section enters the viewport and **resets on exit** so it replays on
- * re-entry (IntersectionObserver on the section).
+ * Scores — Lighthouse-style radial-progress metrics. Each arc fills 0→value with a
+ * center number that counts up when the section enters the viewport, resetting on
+ * exit so it replays on re-entry (IntersectionObserver on the section).
  *
- * Motion / a11y:
- *   - Final numeric values are always in the DOM as text (sr-only per item), so
- *     screen readers get the true figure regardless of animation state. The SVG
- *     arc + the visible counter are `aria-hidden`.
- *   - Under `prefers-reduced-motion: reduce` the final values render immediately
- *     — no count-up, no replay — gated via a hydration-safe external store.
- *   - Accent (`stroke-primary`) and text use tokens (no hex), AAA in both themes.
+ * Motion / a11y: final values are always in the DOM (sr-only per item); the arc and
+ * counter are aria-hidden. Reduced motion shows finals immediately via a
+ * hydration-safe store. Colors use tokens (no hex), AAA in both themes.
  */
 export default function Scores({block}: Props) {
   const {heading, caption, items} = block
