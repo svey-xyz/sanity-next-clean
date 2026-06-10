@@ -3,9 +3,8 @@ import {LinkIcon} from '@sanity/icons'
 import type {Link} from '../../../sanity.types'
 
 /**
- * Link schema object. This link object lets the user first select the type of link and then
- * then enter the URL, page reference, or post reference - depending on the type selected.
- * Learn more: https://www.sanity.io/docs/studio/object-type
+ * Link object: pick a link type, then supply the URL, page, or post reference.
+ * Docs: https://www.sanity.io/docs/studio/object-type
  */
 
 export const link = defineType({
@@ -34,7 +33,6 @@ export const link = defineType({
       type: 'url',
       hidden: ({parent}) => parent?.linkType !== 'href',
       validation: (Rule) =>
-        // Custom validation to ensure URL is provided if the link type is 'href'
         Rule.custom((value, context) => {
           const parent = context.parent as Link
           if (parent?.linkType === 'href' && !value) {
@@ -50,7 +48,6 @@ export const link = defineType({
       to: [{type: 'page'}],
       hidden: ({parent}) => parent?.linkType !== 'page',
       validation: (Rule) =>
-        // Custom validation to ensure page reference is provided if the link type is 'page'
         Rule.custom((value, context) => {
           const parent = context.parent as Link
           if (parent?.linkType === 'page' && !value) {
@@ -66,7 +63,6 @@ export const link = defineType({
       to: [{type: 'post'}],
       hidden: ({parent}) => parent?.linkType !== 'post',
       validation: (Rule) =>
-        // Custom validation to ensure post reference is provided if the link type is 'post'
         Rule.custom((value, context) => {
           const parent = context.parent as Link
           if (parent?.linkType === 'post' && !value) {

@@ -9,8 +9,6 @@ const builder = createImageUrlBuilder({
   dataset: dataset || '',
 })
 
-// Create an image URL builder using the client
-// Export a function that can be used to get image URLs
 function urlForImage(source: SanityImageSource) {
   return builder.image(source)
 }
@@ -26,11 +24,11 @@ export function resolveOpenGraphImage(
   return {url, alt: (image as {alt?: string})?.alt || '', width, height}
 }
 
-// Depending on the type of link, we need to fetch the corresponding page, post, or URL.  Otherwise return null.
+// Resolve a link to its href: page/post become slug paths, href passes through, else null.
 export function linkResolver(link: Link | DereferencedLink | undefined) {
   if (!link) return null
 
-  // If linkType is not set but href is, lets set linkType to "href".  This comes into play when pasting links into the portable text editor because a link type is not assumed.
+  // Pasted PTE links have an href but no linkType — default it to "href".
   if (!link.linkType && link.href) {
     link.linkType = 'href'
   }

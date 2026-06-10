@@ -2,14 +2,11 @@ import {defineField, defineType} from 'sanity'
 import {ControlsIcon} from '@sanity/icons'
 
 /**
- * Reusable `background` object — an optional animated WebGL shader background
- * (via `@svey-xyz/simple-shader-component`) attachable per page-builder block
- * (through the shared mixin in `./shared.ts`) and on the `page` document itself.
- *
- * Consumed by `frontend/app/components/shader/ShaderBackground.tsx`. The
- * `preset` keys mirror `frontend/app/components/shader/registry.ts`; keep them
- * in sync when adding presets. Frontend gracefully no-ops when `type === 'none'`
- * and renders a static gradient under reduced motion.
+ * Reusable `background` object — optional animated WebGL shader background
+ * attachable per page-builder block (via `./shared.ts`) and on the `page` doc.
+ * Consumed by `frontend/app/components/shader/ShaderBackground.tsx`; `preset`
+ * keys mirror that folder's `registry.ts` — keep in sync. Frontend no-ops when
+ * `type === 'none'` and renders a static gradient under reduced motion.
  */
 export const background = defineType({
   name: 'background',
