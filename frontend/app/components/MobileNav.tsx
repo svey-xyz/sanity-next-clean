@@ -43,10 +43,9 @@ type MobileNavProps = {
 }
 
 /**
- * Mount-gated to avoid a known Radix Dialog + React 19 hydration mismatch on the
- * SheetTrigger button (see the original MobileMenu note). Rendering only after
- * mount sidesteps it; the trigger is hidden until HeaderNav decides to collapse,
- * so the pre-mount gap is invisible.
+ * Mount-gated to dodge a Radix Dialog + React 19 hydration mismatch on the
+ * SheetTrigger. Rendering only after mount sidesteps it; the trigger is hidden
+ * until HeaderNav collapses, so the pre-mount gap is invisible.
  */
 const subscribe = () => () => {}
 
@@ -94,9 +93,9 @@ export default function MobileNav({
             <SheetTitle>Menu</SheetTitle>
           </SheetHeader>
 
-          {/* `overflow-x-hidden` clips the staggered reveal's translateX so it
-              can't spawn a flickering horizontal scrollbar (which reflowed the
-              header/footer). The -mx/px pair keeps focus rings off the clip edge. */}
+          {/* overflow-x-hidden clips the staggered reveal's translateX (avoids a
+              flickering horizontal scrollbar that reflowed header/footer); the
+              -mx/px pair keeps focus rings off the clip edge. */}
           <nav
             aria-label="Mobile"
             className="-mx-1 flex flex-1 flex-col gap-1 overflow-x-hidden overflow-y-auto px-1"
@@ -155,8 +154,7 @@ function MobileLeaf({
   const isActive = !isExternal && typeof href === 'string' && href === pathname
 
   return (
-    // Wrapper carries the per-item stagger cascade for the Sheet reveal
-    // (`--reveal-i` drives the cascade declared in globals.css).
+    // Wrapper carries the per-item stagger cascade (`--reveal-i`, see globals.css).
     <div
       className={cn(!nested && 'mobile-nav-item')}
       style={{'--reveal-i': index} as CSSVars}
@@ -244,8 +242,8 @@ function MobileDropdown({
 }
 
 /**
- * Hamburger ↔ close morph. Three bars; the outer two rotate to an X and the
- * middle one fades out when `open`. Motion-safe; reduced motion swaps instantly.
+ * Hamburger ↔ close morph: outer bars rotate to an X, the middle one fades out
+ * when `open`. Motion-safe; reduced motion swaps instantly.
  */
 function HamburgerIcon({open}: {open: boolean}) {
   return (
