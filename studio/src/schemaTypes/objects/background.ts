@@ -35,10 +35,10 @@ export const background = defineType({
       name: 'preset',
       title: 'Shader preset',
       type: 'string',
-      initialValue: 'blob',
+      initialValue: 'gradient',
       description: 'GLSL preset from the frontend shader registry.',
       options: {
-        list: [{title: 'Gradient blob', value: 'blob'}],
+        list: [{title: 'Flowing gradient', value: 'gradient'}],
         layout: 'radio',
       },
       hidden: ({parent}) => parent?.type !== 'shader',
