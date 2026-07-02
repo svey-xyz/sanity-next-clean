@@ -51,12 +51,14 @@ const fullScreenVert = /* glsl */ `
 `
 
 /**
- * Preset #1 — "blob": a slow, organic gradient driven by 2D simplex noise
- * (Ashima/McGuire-style, public-domain implementation), layered into a couple
- * of fbm octaves and warped over time. Produces flowing soft blobs in the theme
- * color over a transparent-to-dark base. Cheap: ~3 noise evals per fragment.
+ * Preset #1 — "gradient": a slow, unbranded flowing gradient driven by two
+ * octaves of classic 2D Perlin noise (Ashima/McGuire-style, public-domain
+ * implementation) drifting over time. Paints the theme/custom accent over a
+ * transparent base — a deliberately generic placeholder for template
+ * consumers to replace with their own presets. Cheap: 2 noise evals per
+ * fragment.
  */
-const blobFrag = /* glsl */ `
+const gradientFrag = /* glsl */ `
 	precision mediump float;
 	uniform float u_time;
 	uniform vec2 u_posSeed;
@@ -105,36 +107,32 @@ const blobFrag = /* glsl */ `
 			vec2 fade_xy = fade(Pf.xy);
 			vec2 n_x = mix(vec2(n00, n01), vec2(n10, n11), fade_xy.x);
 			float n_xy = mix(n_x.x, n_x.y, fade_xy.y);
-			return 2.2 * n_xy; // bigger number = layers closer together
+			return 2.2 * n_xy;
 	}
 
-	float mixNoiseVals(float m, vec2 p, vec2 t) { return m * cnoise(15.0 * t) + cnoise(15.0 * p); }
-
 	void main() {
-		float t = u_time * 0.0012;
-		float scale = 0.000125;
-		float m = 1.1; // amount of movement between phases
+		vec2 p = (gl_FragCoord.xy + u_posSeed.xy) * 0.0009;
+		float t = u_time * 0.03;
 
-		float noise = mixNoiseVals(m, vec2((gl_FragCoord.xy + u_posSeed.xy) * scale), vec2(t));
+		float n = cnoise(p + vec2(t, -t * 0.7));
+		n += 0.5 * cnoise(p * 2.1 - vec2(t * 0.6, t));
 
-		float steps = 5.0; // how many layers
-		float brightness = 4.4; // controls how much of the canvas is bg colour
-
-		float contrast = 1.0; // Increase this value to further increase the contrast
-		float layer = clamp(floor(noise * steps + brightness) / steps, 0.0, 1.0);
+		// Map the noise to a soft coverage ramp of the accent colour.
+		float v = smoothstep(-1.2, 1.4, n);
+		float a = mix(0.15, 0.85, v);
 
 		// The canvas context is premultiplied-alpha (WebGL default), so RGB must
 		// be multiplied by A here. Straight alpha gets composited as
 		// rgb + (1-a)*page — washing toward white on light themes and collapsing
 		// every layer to full-strength colour on dark ones.
-		gl_FragColor = vec4(u_bgColour * layer, layer);
+		gl_FragColor = vec4(u_bgColour * a, a);
 	}
 `
 
 export const shaderPresets = {
-  blob: {
+  gradient: {
     vert: fullScreenVert,
-    frag: blobFrag,
+    frag: gradientFrag,
     // Component-driven uniforms (u_time, u_resolution, u_color, u_intensity) are
     // appended by ShaderBackground; these are inert defaults so the program
     // links and renders something sane before the first hook fires.
@@ -148,7 +146,7 @@ export const shaderPresets = {
 
 export type ShaderPresetName = keyof typeof shaderPresets
 
-export const defaultShaderPreset: ShaderPresetName = 'blob'
+export const defaultShaderPreset: ShaderPresetName = 'gradient'
 
 /** Narrowing helper so callers can validate an author-supplied preset string. */
 export function isShaderPreset(name: string | undefined | null): name is ShaderPresetName {
