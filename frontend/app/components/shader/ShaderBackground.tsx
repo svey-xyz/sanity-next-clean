@@ -316,8 +316,8 @@ export default function ShaderBackground({
         }
       ],
     }
-    // `intensityValue` is intentionally NOT consumed yet (the blob preset has
-    // no u_intensity uniform); add it back to args + deps when a preset uses it.
+    // `intensityValue` is intentionally NOT consumed yet (no current preset
+    // declares u_intensity); add it back to args + deps when a preset uses it.
   }, [presetName, speedValue, posSeed])
 
   // Static gradient (reduced motion, or pre-canvas paint). Uses the resolved
