@@ -64,6 +64,7 @@ const projectFields = /* groq */ `
   hidden,
   "publishedAt": coalesce(publishedAt, _createdAt),
   "updatedAt": coalesce(updatedAt, _updatedAt),
+  orderRank,
   "categories": categories[]->{_id, title, "slug": slug.current},
   "tech": tech[]->{_id, title, "slug": slug.current},
 `
@@ -317,13 +318,27 @@ export const projectSlugsQuery = defineQuery(`
 `)
 
 /**
- * Default-order slug/title list backing the project detail's prev/next
- * pagination (issue #17) when no in-tab nav context exists. Order matches the
- * archive block's server default (`coalesce(publishedAt, _createdAt) desc`).
+ * Prev/next fallback for the project detail page (issue #17), used when no
+ * in-tab nav context exists (direct link / new tab). The fallback must render
+ * the same order the canonical projects archive renders with, so the archive
+ * block's `sortField`/`sortDirection` (issue #16) ride along and the list is
+ * sorted app-side with the shared `applyArchiveSort` comparators in
+ * `projects/[slug]/page.tsx` — GROQ `order()` can't take a field resolved in
+ * the same query. `sort` is `null` when no page is designated the projects
+ * archive; `source` lets the caller skip re-sorting for hand-picked archives
+ * (their sort fields are hidden and possibly stale). When the visitor
+ * navigates from a list, the sessionStorage snapshot of that list (its
+ * rendered filter/sort state) wins instead (see
+ * `app/components/projects/nav-context.ts`).
  */
-export const projectNavListQuery = defineQuery(`
-  *[_type == "project" && defined(slug.current) && !hidden] | order(coalesce(publishedAt, _createdAt) desc) {
+export const projectNavQuery = defineQuery(`{
+  "sort": *[_type == "page" && archive == "projectsArchive"][0]
+    .pageBuilder[_type == "projectsArchive"][0]{sortField, sortDirection, source},
+  "projects": *[_type == "project" && defined(slug.current) && !hidden] | order(coalesce(publishedAt, _createdAt) desc) {
     "slug": slug.current,
-    title
+    title,
+    "publishedAt": coalesce(publishedAt, _createdAt),
+    "updatedAt": coalesce(updatedAt, _updatedAt),
+    orderRank
   }
-`)
+}`)
