@@ -20,6 +20,7 @@
   "dependencies": {
     "@sanity/assist": "^6.1.9",
     "@sanity/icons": "^5.0.0",
+    "@sanity/orderable-document-list": "^2.0.18",
     "@sanity/vision": "^6.3.0",
     "date-fns": "^4.4.0",
     "pluralize-esm": "^9.0.5",
