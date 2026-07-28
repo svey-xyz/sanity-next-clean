@@ -1,6 +1,7 @@
 import {stegaClean} from '@sanity/client/stega'
 
 import {applyArchiveSort, toTime} from './archiveSort'
+import type {SortKey} from '@/app/components/projects/ProjectsList'
 import ProjectsList from '@/app/components/projects/ProjectsList'
 import {type ProjectCardItem} from '@/app/components/projects/ProjectCard'
 import Reveal from '@/app/components/motion/Reveal'
@@ -48,11 +49,16 @@ export default function ProjectsArchive({block}: Props) {
         publishedAt: (p) => toTime(p.publishedAt),
         updatedAt: (p) => toTime(p.updatedAt ?? p.publishedAt),
         title: (p) => p.title,
+        // Drag-and-drop order from the studio's orderable Projects list —
+        // `applyArchiveSort` special-cases 'custom' (code-unit lexorank
+        // comparison, inherent direction, unranked last).
+        custom: (p) => p.orderRank,
       }) as ProjectCardItem[])
   // Seed the interactive sort control from the editor default where it maps
-  // (the control only offers the two date sorts; a 'title' default simply
+  // ('custom' is a first-class control option; a 'title' default simply
   // starts the control on 'created' if the user engages it).
-  const initialSort = sortField === 'updatedAt' ? ('updated' as const) : ('created' as const)
+  const initialSort: SortKey =
+    sortField === 'custom' ? 'custom' : sortField === 'updatedAt' ? 'updated' : 'created'
   // GROQ caps 'latest' at 24; apply the editor's exact limit here.
   const shown = stegaClean(source) === 'latest' ? all.slice(0, limit ?? 6) : all
   const cols = columns === 2 ? 2 : 3
