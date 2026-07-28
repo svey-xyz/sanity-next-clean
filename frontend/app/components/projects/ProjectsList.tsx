@@ -7,6 +7,9 @@ import {stegaClean} from '@sanity/client/stega'
 import ProjectCard, {type ProjectCardItem} from './ProjectCard'
 import FeaturedProjectCard from './FeaturedProjectCard'
 import {saveProjectNavContext} from './nav-context'
+// Direct module import (not the `blocks` barrel) — the barrel would pull the
+// server-only block components into this client module graph.
+import {compareOrderRank} from '@/app/components/blocks/archiveSort'
 import Reveal from '@/app/components/motion/Reveal'
 import {cn} from '@/lib/utils'
 
@@ -16,7 +19,13 @@ type Taxon = {_id: string; title: string | null; slug: string | null}
 
 const ALL = '__all__'
 
-type SortKey = 'created' | 'updated'
+/**
+ * Values of the visitor sort control. `'custom'` is the drag-and-drop order
+ * from the studio's orderable Projects list (`orderRank` lexorank) — offered
+ * only when the data actually carries ranks (or the editor default is
+ * `custom`), so the control never shows a do-nothing option.
+ */
+export type SortKey = 'created' | 'updated' | 'custom'
 
 type Props = {
   projects: Project[]
@@ -29,8 +38,9 @@ type Props = {
    *  (so a hand-picked / pre-ordered selection isn't re-sorted). */
   showSort?: boolean
   /** Initial value of the sort control (editor default from the archive block's
-   *  `sortField`, issue #16). Only meaningful with `showSort`; the SSR render
-   *  uses it too, so first paint matches the server order. Default `'created'`. */
+   *  `sortField`, issue #16 — `'custom'` maps the drag-and-drop studio order).
+   *  Only meaningful with `showSort`; the SSR render uses it too, so first
+   *  paint matches the server order. Default `'created'`. */
   initialSort?: SortKey
   /** Grid columns at the widest breakpoint. Default `3`. */
   columns?: 2 | 3
@@ -202,15 +212,25 @@ export default function ProjectsList({
   const effectiveTag = showFilter && mounted ? activeTag : ALL
   const effectiveTech = showTechFilter && mounted ? activeTech : ALL
 
-  // Sort newest-first by the chosen datetime. Stable copy so the source prop
+  // Sort by the chosen key: newest-first for the datetime sorts, lexorank
+  // (code-unit, unranked last) for 'custom'. Stable copy so the source prop
   // order is never mutated (it backs Visual Editing reconciliation upstream).
   // When sorting is disabled, the incoming order is preserved as-is.
   const ordered = useMemo(() => {
     if (!showSort) return projects
     const effectiveSort: SortKey = mounted ? sort : initialSort
+    if (effectiveSort === 'custom') {
+      return [...projects].sort((a, b) => compareOrderRank(a.orderRank, b.orderRank))
+    }
     const key = effectiveSort === 'updated' ? 'updatedAt' : 'publishedAt'
     return [...projects].sort((a, b) => toTime(b[key]) - toTime(a[key]))
   }, [projects, showSort, sort, mounted, initialSort])
+
+  // Offer the curated option only when it can do something (see {@link SortKey}).
+  const offerCustomSort = useMemo(
+    () => initialSort === 'custom' || projects.some((p) => Boolean(p.orderRank)),
+    [projects, initialSort],
+  )
 
   // A card is visible when both the category and tech filters match ("All" passes).
   const isVisible = (p: Project) => {
@@ -267,6 +287,7 @@ export default function ProjectsList({
                 onChange={(e) => setSort(e.target.value as SortKey)}
                 className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
+                {offerCustomSort && <option value="custom">Curated order</option>}
                 <option value="created">Newest first (created)</option>
                 <option value="updated">Recently updated</option>
               </select>
