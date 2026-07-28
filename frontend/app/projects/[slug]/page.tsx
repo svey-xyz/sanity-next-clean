@@ -19,10 +19,13 @@ import {
 import {
   archivePageSlugQuery,
   projectBySlugQuery,
-  projectNavListQuery,
+  projectNavQuery,
   projectSlugsQuery,
 } from '@/sanity/lib/queries'
 import {resolveOpenGraphImage} from '@/sanity/lib/utils'
+// Direct module import (not the `blocks` barrel) to keep this page's module
+// graph lean — the barrel pulls every block component.
+import {applyArchiveSort, toTime} from '@/app/components/blocks/archiveSort'
 
 type Props = {
   params: Promise<{slug: string}>
@@ -119,7 +122,7 @@ async function DynamicProject({params}: Pick<Props, 'params'>) {
  */
 async function CachedProject({slug, perspective, stega}: {slug: string} & DynamicFetchOptions) {
   'use cache'
-  const [{data: project}, {data: archiveSlug}, {data: navList}] = await Promise.all([
+  const [{data: project}, {data: archiveSlug}, {data: nav}] = await Promise.all([
     sanityFetch({query: projectBySlugQuery, params: {slug}, perspective, stega}),
     // Resolve the designated projects-archive page slug for the back-link +
     // taxonomy chips. `stega: false` — the value goes into hrefs, so it must not
@@ -130,9 +133,11 @@ async function CachedProject({slug, perspective, stega}: {slug: string} & Dynami
       perspective,
       stega: false,
     }),
-    // Default-order prev/next fallback list (issue #17). `stega: false` —
-    // slugs become hrefs, titles are plain button labels.
-    sanityFetch({query: projectNavListQuery, perspective, stega: false}),
+    // Prev/next fallback (issue #17): projects + the canonical archive's sort
+    // config, so the fallback follows the order the source archive renders
+    // with. `stega: false` — slugs become hrefs, titles are plain button
+    // labels, and the sort config drives logic.
+    sanityFetch({query: projectNavQuery, perspective, stega: false}),
   ])
 
   if (!project?._id) {
@@ -152,6 +157,23 @@ async function CachedProject({slug, perspective, stega}: {slug: string} & Dynami
   }
 
   const hasBody = Boolean(project.body?.length)
+
+  // Fallback prev/next order: the canonical archive's editor-configured sort
+  // (issue #16), matching what `ProjectsArchive` renders. Hand-picked archives
+  // keep the query's `publishedAt desc` default — their sort fields are hidden
+  // in the Studio and possibly stale. `applyArchiveSort` stega-cleans the
+  // config values; this fetch is `stega: false` anyway.
+  const navProjects = nav?.projects ?? []
+  const navEntries =
+    nav?.sort && nav.sort.source !== 'picked'
+      ? applyArchiveSort(navProjects, nav.sort, {
+          publishedAt: (p) => toTime(p.publishedAt),
+          updatedAt: (p) => toTime(p.updatedAt ?? p.publishedAt),
+          title: (p) => p.title,
+          // Drag-and-drop studio order — special-cased by `applyArchiveSort`.
+          custom: (p) => p.orderRank,
+        })
+      : navProjects
 
   return (
     <div className="container my-12 grid gap-12 lg:my-24">
@@ -234,10 +256,11 @@ async function CachedProject({slug, perspective, stega}: {slug: string} & Dynami
           </aside>
         </div>
 
-        {/* Prev/next through the visitor's originating list (or the default
-            order). The fallback list is fetched stega: false; the context
-            entries are stega-cleaned at capture time (ProjectsList). */}
-        <ProjectPagination slug={project.slug} fallbackEntries={navList ?? []} className="mt-12" />
+        {/* Prev/next through the visitor's originating list (or the archive-
+            order fallback above). The fallback list is fetched stega: false;
+            the context entries are stega-cleaned at capture time
+            (ProjectsList). */}
+        <ProjectPagination slug={project.slug} fallbackEntries={navEntries} className="mt-12" />
       </article>
     </div>
   )
