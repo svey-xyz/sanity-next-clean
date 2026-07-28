@@ -63,10 +63,17 @@ export const sortFields = ({
   fields,
   initialField,
   initialDirection = 'desc',
+  directionlessFields = [],
 }: {
   fields: {title: string; value: string}[]
   initialField: string
   initialDirection?: 'asc' | 'desc'
+  /**
+   * Field values with an inherent order (e.g. `'custom'` — the lexorank set by
+   * a drag-and-drop document list). The direction control hides while one of
+   * these is selected.
+   */
+  directionlessFields?: string[]
 }) => [
   defineField({
     name: 'sortField',
@@ -90,7 +97,10 @@ export const sortFields = ({
       layout: 'radio',
       direction: 'horizontal',
     },
-    hidden: ({parent}) => (parent as {source?: string} | undefined)?.source === 'picked',
+    hidden: ({parent}) => {
+      const p = parent as {source?: string; sortField?: string} | undefined
+      return p?.source === 'picked' || directionlessFields.includes(p?.sortField ?? '')
+    },
   }),
 ]
 
