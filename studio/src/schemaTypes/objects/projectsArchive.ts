@@ -110,8 +110,13 @@ export const projectsArchive = defineType({
         {title: 'Published date', value: 'publishedAt'},
         {title: 'Last updated', value: 'updatedAt'},
         {title: 'Title', value: 'title'},
+        // The drag-and-drop order of the studio's Projects list
+        // (@sanity/orderable-document-list `orderRank`). Direction control
+        // hides for this — the rank has one inherent order.
+        {title: 'Custom order', value: 'custom'},
       ],
       initialField: 'publishedAt',
+      directionlessFields: ['custom'],
     }),
   ],
   preview: {
