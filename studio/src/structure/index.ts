@@ -1,5 +1,7 @@
 import {CogIcon} from '@sanity/icons/Cog'
+import {RocketIcon} from '@sanity/icons/Rocket'
 import {TagIcon} from '@sanity/icons/Tag'
+import {orderableDocumentListDeskItem} from '@sanity/orderable-document-list'
 import type {StructureBuilder, StructureResolver, StructureResolverContext} from 'sanity/structure'
 import {DocumentActionComponent, DocumentActionsContext, Template} from 'sanity'
 import pluralize from 'pluralize-esm'
@@ -36,7 +38,20 @@ export const structure = (S: StructureBuilder, context: StructureResolverContext
         // Pluralize the title of each document type.  This is not required but just an option to consider.
         .map((listItem) => {
           return listItem.title(pluralize(listItem.getTitle() as string))
-        }),
+        })
+        // Projects swap in a drag-and-drop ordered list (orderRank) — the
+        // projects archive's 'custom' sort renders in this order.
+        .map((listItem) =>
+          listItem.getId() === 'project'
+            ? orderableDocumentListDeskItem({
+                type: 'project',
+                title: 'Projects',
+                icon: RocketIcon,
+                S,
+                context,
+              })
+            : listItem,
+        ),
     ])
 
 export const schemaOptions = {
