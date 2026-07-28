@@ -1,4 +1,5 @@
 import {RocketIcon} from '@sanity/icons/Rocket'
+import {orderRankField, orderRankOrdering} from '@sanity/orderable-document-list'
 import {format, parseISO} from 'date-fns'
 import {defineArrayMember, defineField, defineType} from 'sanity'
 import type {Project} from '../../../sanity.types'
@@ -21,7 +22,12 @@ export const project = defineType({
   title: 'Project',
   icon: RocketIcon,
   type: 'document',
+  orderings: [orderRankOrdering],
   fields: [
+    // Hidden lexorank managed by the drag-and-drop Projects list in the studio
+    // structure (@sanity/orderable-document-list). Read by the projects
+    // archive's 'custom' sort on the frontend (blocks/archiveSort.ts).
+    orderRankField({type: 'project'}),
     defineField({
       name: 'title',
       title: 'Title',
